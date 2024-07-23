@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  ecommerce:
+    image: mysql:8
+    ports:
+      - 3309:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: les-escragots-du-clos
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    networks:
+      - ECOM
+
+  test-db:
+    image: mysql:8
+    ports:
+      - 3308:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
+    networks:
+      - ECOM
+
+  backend:
+    build: ./backend
+    ports:
+      - 3000:3000
+    environment:
+      DATABASE_HOST: ecommerce
+      DATABASE_PORT: 3306
+      DATABASE_USER: user
+      DATABASE_PASSWORD: pass
+      DATABASE_NAME: les-escragots-du-clos
+    networks:
+      - ECOM
+
+  frontend:
+    build: ./frontend
+    ports:
+      - 3001:3001
+    networks:
+      - ECOM
+
+networks:
+  ECOM:
+    external: true
