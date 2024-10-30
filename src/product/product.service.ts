@@ -46,7 +46,7 @@ export class ProductService {
         name: product.name,
         description: product.description,
         price: product.price,
-        image: product.imagePath,
+        imagePath: product.imagePath,
         category: product.category,
         averageRating: product.advice.length > 0
           ? product.advice.reduce((sum, advice) => sum + advice.rating, 0) / product.advice.length
