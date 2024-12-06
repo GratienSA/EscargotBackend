@@ -10,18 +10,20 @@ import {
   ParseIntPipe,
   UploadedFile,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/index';
 import { User } from '@prisma/client';
 import { GetUser } from 'src/auth/decorator/get-user-decorator';
-import { JwtGuard } from 'src/auth/guard/jwt.strategy';
+import { JwtGuard } from 'src/auth/guard/jwt.guard';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @UseGuards(JwtGuard)
   @Get('/all')
   getAllUsers() {
     return this.userService.getAllUsers();
@@ -31,6 +33,12 @@ export class UserController {
   @Get('profile')
   getProfile(@GetUser() user: User) {
     return this.userService.getUserProfile(user.id);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get(':id')
+  async getUserById(@Param('id', ParseIntPipe) userId: number) {
+    return this.userService.getUserProfile(userId);
   }
 
   @UseGuards(JwtGuard)
@@ -47,8 +55,8 @@ export class UserController {
     return this.userService.updateUser(userId, updateUserDto);
   }
 
-  // @UseGuards(JwtGuard)
-  // @HttpCode(204)
+  @UseGuards(JwtGuard)
+  @HttpCode(204)
   @Delete('/delete/:id')
   deleteUser(@Param('id', ParseIntPipe) id: number) {
     return this.userService.deleteUser(id);

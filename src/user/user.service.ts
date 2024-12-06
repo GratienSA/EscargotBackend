@@ -103,4 +103,37 @@ export class UserService {
       throw error;
     }
   }
+
+  async getUserByEmail(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        address: true,
+        city: true,
+        postalCode: true,
+        country: true,
+        phone: true,
+        profileImagePath: true,
+        isActive: true,
+        gdprConsent: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLoginAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+  
+  async getUserById(userId: number) {
+    return this.getUserProfile(userId);
+  }
 }

@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
-import * as hbs from 'nodemailer-express-handlebars';
 import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
 import * as path from 'path';
 
+// Importation du module de façon spécifique
+import { NodemailerExpressHandlebarsOptions } from 'nodemailer-express-handlebars';
+const hbs = require('nodemailer-express-handlebars');
 
 interface ExtendedMailOptions extends nodemailer.SendMailOptions {
   template?: string;
@@ -26,8 +28,8 @@ export class EmailService {
       },
     });
 
-    
-    const handlebarOptions: hbs.NodemailerExpressHandlebarsOptions = {
+    // Configuration des options Handlebars
+    const handlebarOptions: NodemailerExpressHandlebarsOptions = {
       viewEngine: {
         extName: '.hbs',
         partialsDir: path.resolve('./src/templates'),
@@ -37,12 +39,13 @@ export class EmailService {
       extName: '.hbs',
     };
 
+    // Enregistrement de Handlebars comme moteur de compilation
     this.transporter.use('compile', hbs(handlebarOptions));
   }
 
   async sendUserConfirmation(user: User, token: string) {
     const confirmationUrl = `http://localhost:3000/fresh-snails`;
-  
+
     await this.transporter.sendMail({
       from: this.config.get('SMTP_EMAIL'),
       to: user.email,
@@ -66,6 +69,26 @@ export class EmailService {
         user: user,
         code: code,
         resetUrl: resetUrl,
+        baseUrl: this.config.get('SERVER_URL'),
+      },
+    } as ExtendedMailOptions);
+  }
+
+  async sendPurchaseReceipt(order): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.config.get('SMTP_EMAIL'),
+      to: order.user.email,
+      subject: 'Reçu de votre commande',
+      template: 'PurchaseReceipt', 
+      context: {
+        userName: order.user.name,
+        orderId: order.id,
+        totalAmount: order.totalAmount.toFixed(2), 
+        items: order.orderItems.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price.toFixed(2),
+        })),
         baseUrl: this.config.get('SERVER_URL'),
       },
     } as ExtendedMailOptions);

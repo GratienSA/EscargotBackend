@@ -11,10 +11,10 @@ import {
 import { CartService } from './cart.service';
 
 import { User } from '@prisma/client';
-import { JwtGuard } from 'src/auth/guard';
 import { GetUser } from 'src/auth/decorator';
 import { AddToCartDto } from './dto/Add-to-Cart.dto';
 import { UpdateCartItemDto } from './dto/UpdateCartDto';
+import { JwtGuard } from 'src/auth/guard/jwt.guard';
 
 @UseGuards(JwtGuard)
 @Controller('cart')

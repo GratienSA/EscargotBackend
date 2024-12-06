@@ -11,7 +11,8 @@ import {
 } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CategoryDto } from './dto';
-import { JwtGuard } from 'src/auth/guard';
+import { JwtGuard } from 'src/auth/guard/jwt.guard';
+
 
 @Controller('category')
 export class CategoryController {
@@ -21,12 +22,12 @@ export class CategoryController {
   getAllCategories() {
     return this.categoryService.getAllCategories();
   }
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard)
   @Post('/new')
   insertNewCategory(@Body() dto: CategoryDto) {
     return this.categoryService.insertNewCategory(dto);
   }
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard)
   @Patch('/update/:id')
   editCategory(
     @Param('id', ParseIntPipe) id: number,
@@ -35,7 +36,7 @@ export class CategoryController {
     return this.categoryService.editCategory(id, dto);
   }
 
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard)
   @Delete('/delete/:id')
   deleteCategory(@Param('id', ParseIntPipe) id: number) {
     return this.categoryService.deleteCategory(id);

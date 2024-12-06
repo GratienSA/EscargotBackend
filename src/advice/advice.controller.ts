@@ -10,11 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdviceService } from './advice.service';
-import { JwtGuard } from 'src/auth/guard';
 import { CreateAdviceDto } from './dto/create.advice.dto';
 import { UpdateAdviceDto } from './dto/update.advice.dto';
 import { GetUser } from 'src/auth/decorator';
 import { User } from '@prisma/client';
+import { JwtGuard } from 'src/auth/guard/jwt.guard';
 
 @UseGuards(JwtGuard)
 @Controller('advice')

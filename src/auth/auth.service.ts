@@ -15,6 +15,7 @@ import * as speakeasy from 'speakeasy';
 import { ResetPasswordConfirmationDto } from './dto/resetPasswordConfirmationDto';
 import { DeleteAccountDto } from './dto/DeleteAccountDto';
 import { EmailService } from 'src/email/email.service';
+import { OAuthDto } from './dto/oauth.dto';
 
 @Injectable()
 export class AuthService {
@@ -66,7 +67,6 @@ export class AuthService {
       throw new ForbiddenException('Error creating user');
     }
   }
-
 
   async signin(dto: SigninDto) {
     const user = await this.prismaService.user.findUnique({
@@ -155,5 +155,45 @@ export class AuthService {
     await this.prismaService.user.delete({ where: { id: userId } });
 
     return { message: 'Account has been deleted' };
+  }
+
+
+  async loginWithOAuth(providerAccountId: string, provider: string): Promise<OAuthDto | null> {
+    const account = await this.prismaService.account.findFirst({
+      where: {
+        provider,
+        providerAccountId,
+      },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+ 
+ const user = await this.prismaService.user.findUnique({
+  where: { id: account.userId }, 
+});
+
+if (!user) {
+  throw new NotFoundException('User not found');
+}
+
+
+const token = await this.signToken(user.id.toString());
+    const oauthDto: OAuthDto = {
+      id: account.id,
+      userId: account.userId,
+      provider: account.provider,
+      providerAccountId: account.providerAccountId,
+      refreshToken: account.refresh_token,
+      accessToken: account.access_token,
+      expiresAt: account.expires_at,
+      tokenType: account.token_type,
+      scope: account.scope,
+      idToken: account.id_token,
+      sessionState: account.session_state,
+    };
+
+    return oauthDto;
   }
 }

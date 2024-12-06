@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reçu de Commande</title>
+</head>
+<body>
+  <h1>Merci pour votre achat, {{firstName}}!</h1>
+  <p>Voici les détails de votre commande :</p>
+  <p>ID de commande : {{orderId}}</p>
+  <p>Total payé : {{totalAmount}} €</p>
+
+  <h2>Détails des articles :</h2>
+  <ul>
+    {{#each items}}
+      <li>{{this.name}} - Quantité : {{this.quantity}} - Prix : {{this.price}} €</li>
+    {{/each}}
+  </ul>
+
+  <p>Merci de votre confiance !</p>
+</body>
+</html>

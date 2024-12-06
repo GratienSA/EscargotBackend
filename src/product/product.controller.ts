@@ -2,14 +2,15 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntP
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { JwtGuard } from 'src/auth/guard';
 import { User } from '@prisma/client';
 import { GetUser } from 'src/auth/decorator';
+// import { JwtGuard } from 'src/auth/guard/jwt.guard';
+// import { AdminGuard } from 'src/auth/guard/admin.guard';
 
 @Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
-  
+
   @Get('/all')
   getAllProducts() {
     return this.productService.getAllProducts();
@@ -38,7 +39,7 @@ export class ProductController {
     });
   }
 
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard, AdminGuard) 
   @Post('/new')
   createProduct(@Body() createProductDto: CreateProductDto, @GetUser() user: User) {
     return this.productService.createProduct(createProductDto, user);
@@ -49,7 +50,7 @@ export class ProductController {
     return this.productService.getProductById(id);
   }
 
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard, AdminGuard) 
   @Patch('/update/:id')
   updateProduct(
     @Param('id', ParseIntPipe) id: number,
@@ -58,7 +59,7 @@ export class ProductController {
     return this.productService.updateProduct(id, updateProductDto);
   }
 
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard, AdminGuard) 
   @Delete('/delete/:id')
   removeProduct(@Param('id', ParseIntPipe) id: number) {
     return this.productService.deleteProduct(id);

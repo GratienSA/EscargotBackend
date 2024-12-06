@@ -13,27 +13,49 @@ datasource db {
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
-  firstName     String    @db.VarChar(65)
-  lastName      String    @db.VarChar(65)
-  address       String    @db.VarChar(180)
-  city          String    @db.VarChar(65)
-  postalCode    String    @db.VarChar(20)
-  country       String    @db.VarChar(65)
-  phone         String    @db.VarChar(30)
-  email         String    @unique @db.VarChar(255)
-  password      String    @db.VarChar(255)
-  isActive      Boolean   @default(true)
-  gdprConsent   Boolean   @default(false) 
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          Role      @relation(fields: [roleId], references: [id])
-  roleId        Int       @default(1)
-  carts         Cart[]
-  advice        Advice[]
-  orders        Order[]
-  profileImagePath String? @db.VarChar(255)
+  id               Int       @id @default(autoincrement())
+  firstName        String    @db.VarChar(65)
+  lastName         String    @db.VarChar(65)
+  address          String    @db.VarChar(180)
+  city             String    @db.VarChar(65)
+  postalCode       String    @db.VarChar(20)
+  country          String    @db.VarChar(65)
+  phone            String    @db.VarChar(30)
+  email            String    @unique @db.VarChar(255)
+  password         String    @db.VarChar(255)
+  isActive         Boolean   @default(true)
+  gdprConsent      Boolean   @default(false) 
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  role             Role      @relation(fields: [roleId], references: [id])
+  roleId           Int       @default(1)
+  carts            Cart[]
+  advice           Advice[]
+  orders           Order[]
+  profileImagePath String?   @db.VarChar(255)
+  accounts         Account[]
+  paymentMethod    String?
+
+}
+
+model Account {
+ id                 Int      @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }
 model Role {
   id          Int       @id @default(autoincrement())
@@ -67,6 +89,7 @@ model Product {
   advice      Advice[]
   orderItems OrderItem[]
   inventory  Inventory?
+  rating      Float?
 }
 
 model CartProduct {
@@ -114,6 +137,7 @@ model Inventory {
 model Order {
   id            Int         @id @default(autoincrement())
   userId        Int
+  taxPrice        Decimal   @db.Decimal(12, 2)
   totalAmount   Float
   status        String      @db.VarChar(50)
   createdAt     DateTime    @default(now())
@@ -121,6 +145,15 @@ model Order {
   user          User        @relation(fields: [userId], references: [id])
   orderItems    OrderItem[]
   payment       Payment?
+  shippingAddress Json @default("{}") 
+  paymentResult   Json?
+  paymentMethod   String
+  itemsPrice      Decimal   @db.Decimal(12, 2)
+  shippingPrice   Decimal   @db.Decimal(12, 2)
+  isPaid          Boolean      @default(false)
+  paidAt          DateTime?
+  isDelivered     Boolean?     @default(false)
+  deliveredAt     DateTime?
 }
 
 model OrderItem {
@@ -140,6 +173,7 @@ model Payment {
   status        String   @db.VarChar(50)
   paymentMethod String   @db.VarChar(50)
   transactionId String?  @db.VarChar(255)
+  stripeSessionId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   order         Order    @relation(fields: [orderId], references: [id])

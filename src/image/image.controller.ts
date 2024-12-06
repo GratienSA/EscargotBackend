@@ -5,8 +5,8 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { createReadStream, existsSync, mkdirSync } from 'fs';
 import { Response } from 'express';
-import { JwtGuard } from '../auth/guard';
 import { GetUser } from '../auth/decorator';
+import { JwtGuard } from 'src/auth/guard/jwt.guard';
 
 @Controller('image')
 export class ImageController {
