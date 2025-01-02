@@ -13,9 +13,9 @@ import { ConfigService } from '@nestjs/config';
 import { ResetPasswordDemandDto } from './dto/resetPasswordDemand';
 import * as speakeasy from 'speakeasy';
 import { ResetPasswordConfirmationDto } from './dto/resetPasswordConfirmationDto';
-import { DeleteAccountDto } from './dto/DeleteAccountDto';
 import { EmailService } from 'src/email/email.service';
 import { OAuthDto } from './dto/oauth.dto';
+import { DeleteAccountDto } from './dto';
 
 @Injectable()
 export class AuthService {

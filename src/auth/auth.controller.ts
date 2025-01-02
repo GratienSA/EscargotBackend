@@ -3,11 +3,11 @@ import { SignupDto } from './dto/signupDto';
 import { AuthService } from './auth.service';
 import { ResetPasswordDemandDto } from './dto/resetPasswordDemand';
 import { ResetPasswordConfirmationDto } from './dto/resetPasswordConfirmationDto';
-import { DeleteAccountDto } from './dto/DeleteAccountDto';
 import { GetUser } from './decorator/get-user-decorator';
 import { JwtGuard } from './guard/jwt.guard';
 import { OAuthDto } from 'src/auth/dto/oauth.dto';
 import { SigninDto } from './dto/signinDto';
+import { DeleteAccountDto } from './dto';
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) {}
