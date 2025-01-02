@@ -2,4 +2,4 @@ export * from './signinDto';
 export * from './signupDto';
 export * from './resetPasswordDemand';
 export * from './resetPasswordConfirmationDto';
-export * from './deleteAccountDto';
+export * from './DeleteAccountDto';
