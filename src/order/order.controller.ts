@@ -1,17 +1,94 @@
-import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query, UseGuards, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { OrdersService } from './order.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { GetUser } from 'src/auth/decorator'; 
-import { User } from '@prisma/client';
+import { CreateOrderDto, OrderDto, OrderItemDto } from './dto/create-order.dto'; 
+import { User } from '@prisma/client'; 
+import { GetUser } from 'src/auth/decorator'
+import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
+import { StripeService } from 'src/stripe/stripe.service';
+import Stripe from 'stripe';
+import { PrismaService } from 'src/prisma/prisma.service';
 
-@Controller('orders')
+ 
+@UseGuards(AuthGuard('jwt'))
+@Controller('order')
 export class OrderController {
-  constructor(private readonly orderService: OrdersService) {}
+  constructor(
+    private readonly orderService: OrdersService,
+    private readonly stripeService: StripeService,
+    private readonly prisma: PrismaService
+  ) {}
 
   @Post()
-  async createOrder(@Body() createOrderDto: CreateOrderDto, @GetUser() user: User) {
-    return this.orderService.createOrder(user.id, createOrderDto); // Passez l'ID de l'utilisateur et le DTO
+  async createOrder(@Body() createOrderDto: CreateOrderDto) {
+    if (!createOrderDto.orderItems || createOrderDto.orderItems.length === 0) {
+      throw new BadRequestException('Order items are required.');
+    }
+
+    const { userId, orderItems } = createOrderDto;
+
+    if (!userId || !orderItems[0]?.productId) {
+      throw new BadRequestException('Invalid data: userId or productId missing.');
+    }
+
+    const sessionData: Stripe.Checkout.SessionCreateParams = {
+      payment_method_types: ['card'] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],
+      line_items: orderItems.map((item: OrderItemDto) => ({
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `Produit ${item.productId}`,
+          },
+          unit_amount: parseInt((item.price * 100).toFixed(0)),
+        },
+        quantity: item.quantity,
+      })),
+      mode: 'payment' as 'payment',
+      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+    };
+
+    try {
+      // Créer la session Stripe
+      const session = await this.stripeService.createCheckoutSession(sessionData);
+
+      // Créer la commande dans la base de données
+      const order = await this.prisma.order.create({
+        data: {
+          userId,
+          shippingStreet: createOrderDto.shippingStreet,
+          shippingCity: createOrderDto.shippingCity,
+          shippingZip: createOrderDto.shippingZip,
+          paymentMethod: createOrderDto.paymentMethod,
+          itemsPrice: parseFloat(createOrderDto.itemsPrice.toString()),
+          taxPrice: parseFloat(createOrderDto.taxPrice.toString()),
+          shippingPrice: parseFloat(createOrderDto.shippingPrice?.toString() || '0'),
+          totalAmount: parseFloat(createOrderDto.totalAmount.toString()),
+          status: 'PENDING',
+          isPaid: false,
+          orderItems: {
+            create: orderItems.map(item => ({
+              quantity: item.quantity,
+              price: parseFloat(item.price.toString()),
+              product: { connect: { id: item.productId } },
+            })),
+          },
+        },
+        include: {
+          orderItems: true,
+        },
+      });
+
+      // Retourner l'ID de la session Stripe et l'ID de la commande
+      return { 
+        sessionId: session.id,
+        orderId: order.id
+      };
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw new InternalServerErrorException('Failed to create order: ' + error.message);
+    }
   }
+
 
   @Post(':id/deliver')
   async deliver(@Param('id') orderId: number) {
@@ -38,10 +115,13 @@ export class OrderController {
     return this.orderService.deleteOrder(orderId);
   }
 
-  @Get()
-  async getAllOrders() {
+  @Get('all')
+  async getAllOrders(
+   
+  ): Promise<{ data: OrderDto[]; totalPages: number }> {
     return this.orderService.getAllOrders();
   }
+  
 
   @Get('summary')
   async getOrderSummary() {
@@ -56,6 +136,7 @@ export class OrderController {
   ) {
     return this.orderService.getMyOrders(user.id, page, limit);
   }
+  
   
 
   @Get(':id')

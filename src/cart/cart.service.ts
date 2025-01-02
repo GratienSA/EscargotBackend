@@ -4,7 +4,6 @@ import {
     NotFoundException,
   } from '@nestjs/common';
   import { PrismaService } from 'src/prisma/prisma.service';
-  import { User } from '@prisma/client';
 import { AddToCartDto } from './dto/Add-to-Cart.dto';
 import { UpdateCartItemDto } from './dto/UpdateCartDto';
   

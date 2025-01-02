@@ -8,35 +8,35 @@ import { CheckoutService } from './checkout.service';
 export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
 
-  @Post()
+  @Post('session')
   async createCheckoutSession(@Body() checkoutData: CheckoutData, @Req() req: Request) {
     console.log("Received checkout request:", JSON.stringify(checkoutData, null, 2));
-
+  
     const token = req.headers.authorization?.split(' ')[1];
-    let userId: string | undefined;
-
+    let userId: number | undefined;
+  
     if (token) {
       try {
-        const decoded = jwtDecode<{ sub: string }>(token); 
+        const decoded = jwtDecode<{ sub: number }>(token); 
         userId = decoded.sub;
       } catch (error) {
         console.error('Error decoding token:', error);
         throw new BadRequestException('Invalid authentication token');
       }
     }
-
+  
     if (!userId) {
       throw new BadRequestException('User not authenticated');
     }
-
+  
     try {
       const { items, success_url, cancel_url } = checkoutData;
-
+  
+      // Validate the items array
       if (!items || !Array.isArray(items) || items.length === 0) {
         throw new BadRequestException('Invalid or empty items array');
       }
-
-      // Validate each item in the array
+  
       items.forEach((item, index) => {
         if (!item.productId || typeof item.productId !== 'string' || isNaN(parseInt(item.productId))) {
           throw new BadRequestException(`Invalid productId for item at index ${index}`);
@@ -54,14 +54,23 @@ export class CheckoutController {
           throw new BadRequestException(`Invalid image URL for item at index ${index}`);
         }
       });
-
+  
+      // Check if URLs are valid
+      if (!success_url || !cancel_url) {
+        throw new BadRequestException('Success URL or Cancel URL is missing');
+      }
+  
       const session = await this.checkoutService.createCheckoutSession({
         items,
         userId,
         success_url: success_url || 'http://localhost:3000/success',
         cancel_url: cancel_url || 'http://localhost:3000/cart',
+        shippingStreet: '',
+        shippingCity: '',
+        shippingZip: '',
+        paymentMethod: 'stripe'
       });
-
+  
       console.log("Stripe session created:", session.sessionId);
       return { sessionId: session.sessionId };
     } catch (error) {
@@ -70,3 +79,4 @@ export class CheckoutController {
     }
   }
 }
+  

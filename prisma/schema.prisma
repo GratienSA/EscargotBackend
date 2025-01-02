@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 generator client {
   provider = "prisma-client-js"
 }
@@ -24,7 +22,7 @@ model User {
   email            String    @unique @db.VarChar(255)
   password         String    @db.VarChar(255)
   isActive         Boolean   @default(true)
-  gdprConsent      Boolean   @default(false) 
+  gdprConsent      Boolean   @default(false)
   lastLoginAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -35,28 +33,28 @@ model User {
   orders           Order[]
   profileImagePath String?   @db.VarChar(255)
   accounts         Account[]
-  paymentMethod    String?
-
+  paymentMethod    PaymentMethod?
 }
 
 model Account {
- id                 Int      @id @default(autoincrement())
-  userId            Int
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  id                 Int      @id @default(autoincrement())
+  userId             Int
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
+
 model Role {
   id          Int       @id @default(autoincrement())
   name        String    @unique @db.VarChar(65)
@@ -73,23 +71,6 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   products    Product[]
-}
-
-model Product {
-  id          Int       @id @default(autoincrement())
-  name        String    @db.VarChar(255)
-  description String    @db.Text
-  price       Float     @db.Float
-  imagePath   String    @db.VarChar(255)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  categoryId  Int
-  category    Category  @relation(fields: [categoryId], references: [id])
-  cartProducts CartProduct[]
-  advice      Advice[]
-  orderItems OrderItem[]
-  inventory  Inventory?
-  rating      Float?
 }
 
 model CartProduct {
@@ -127,33 +108,56 @@ model Advice {
 }
 
 model Inventory {
-  id        Int      @id @default(autoincrement())
-  productId Int      @unique
-  quantity  Int
-  lastUpdated DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id])
+  id          Int       @id @default(autoincrement())
+  productId   Int       @unique
+  quantity    Int
+  lastUpdated DateTime  @default(now())
+  product     Product   @relation(fields: [productId], references: [id])
+}
+
+enum PaymentMethod {
+CASH         
+stripe
+}
+model Product {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  description String    @db.Text
+  price       Float     
+  imagePath   String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  categoryId  Int
+  category    Category  @relation(fields: [categoryId], references: [id])
+  cartProducts CartProduct[]
+  advice      Advice[]
+  orderItems  OrderItem[]
+  inventory   Inventory?
+  rating      Float?
 }
 
 model Order {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  taxPrice        Decimal   @db.Decimal(12, 2)
-  totalAmount   Float
-  status        String      @db.VarChar(50)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  user          User        @relation(fields: [userId], references: [id])
-  orderItems    OrderItem[]
-  payment       Payment?
-  shippingAddress Json @default("{}") 
-  paymentResult   Json?
-  paymentMethod   String
-  itemsPrice      Decimal   @db.Decimal(12, 2)
-  shippingPrice   Decimal   @db.Decimal(12, 2)
-  isPaid          Boolean      @default(false)
-  paidAt          DateTime?
-  isDelivered     Boolean?     @default(false)
-  deliveredAt     DateTime?
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  taxPrice       Float     // Remplacé par Float
+  totalAmount    Float     // Remplacé par Float
+  status         String    @db.VarChar(50)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id])
+  orderItems     OrderItem[]
+  payment        Payment?
+  shippingStreet String
+  shippingCity   String
+  shippingZip    String
+  paymentResult  Json?
+  paymentMethod  PaymentMethod
+  itemsPrice     Float     // Remplacé par Float
+  shippingPrice  Float     // Remplacé par Float
+  isPaid         Boolean   @default(false)
+  paidAt         DateTime?
+  isDelivered    Boolean?  @default(false)
+  deliveredAt    DateTime?
 }
 
 model OrderItem {
@@ -161,20 +165,20 @@ model OrderItem {
   orderId   Int
   productId Int
   quantity  Int
-  price     Float
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
+  price     Float     // Remplacé par Float
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 }
 
 model Payment {
-  id            Int      @id @default(autoincrement())
-  orderId       Int      @unique
-  amount        Float
-  status        String   @db.VarChar(50)
-  paymentMethod String   @db.VarChar(50)
-  transactionId String?  @db.VarChar(255)
+  id             Int        @id @default(autoincrement())
+  orderId        Int        @unique
+  amount         Float      // Remplacé par Float
+  status         String     @db.VarChar(50)
+  paymentMethod  PaymentMethod
+  transactionId  String?    @db.VarChar(255)
   stripeSessionId String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  order         Order    @relation(fields: [orderId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  order          Order      @relation(fields: [orderId], references: [id])
 }

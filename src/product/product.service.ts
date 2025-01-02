@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { EmailService } from 'src/email/email.service';
 import { ProductGateway } from './product.gateway';
 import { User } from '@prisma/client';
 
@@ -22,41 +21,80 @@ export class ProductService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly productGateway: ProductGateway,
-    private readonly emailService: EmailService,
   ) {}
 
-  async getAllProducts() {
+  async getAllProducts(params: {
+    query?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+  }) {
+    const { query, category, page = 1, limit = 10 } = params;
+
     try {
       const products = await this.prisma.product.findMany({
-        orderBy: {
-          name: 'desc',
+        where: {
+          ...(query && {
+            name: {
+              contains: query,
+            },
+          }),
+          ...(category && {
+            category: {
+              name: category, 
+            },
+          }),
         },
+        orderBy: {
+          name: 'asc', 
+        },
+        skip: (page - 1) * limit,
+        take: Number(limit),
         include: {
-          category: {
-            select: {
-              name: true
-            }
-          },
-          advice: true
+          category: true,
+          advice: true,
+          inventory: true,
         },
       });
 
-      return products.map(product => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        imagePath: product.imagePath,
-        category: product.category,
-        averageRating: product.advice.length > 0
-          ? product.advice.reduce((sum, advice) => sum + advice.rating, 0) / product.advice.length
-          : null
-      }));
+      const totalResults = await this.prisma.product.count({
+        where: {
+          ...(query && {
+            name: {
+              contains: query,
+            },
+          }),
+          ...(category && {
+            category: {
+              name: category,
+            },
+          }),
+        },
+      });
+
+      return {
+        data: products.map(product => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          imagePath: product.imagePath,
+          category: product.category.name, 
+          inventory: product.inventory?.quantity || 0,
+          averageRating:
+            product.advice.length > 0
+              ? product.advice.reduce((sum, advice) => sum + advice.rating, 0) / product.advice.length
+              : null,
+        })),
+        totalPages: Math.ceil(totalResults / limit),
+      };
     } catch (error) {
-      console.error('Error in getAllProducts:', error);
-      throw new InternalServerErrorException('An error occurred while fetching all products');
+      console.error('Erreur dans getAllProducts:', error);
+      throw new InternalServerErrorException('Une erreur est survenue lors de la récupération des produits');
     }
   }
+
 
   async globalSearch(params: SearchParams) {
     const { query, page = 1, limit = 12, sort, category, priceRange, rating = 0,} = params;
@@ -142,36 +180,47 @@ export class ProductService {
     }
   }
   
-
-  async createProduct(dto: CreateProductDto, user: User) {
-    const category = await this.prisma.category.findFirst({
-      where: {
-        name: dto.category,
-      }
-    });
-  
-    if (!category) {
-      throw new NotFoundException(`Category with name ${dto.category} not found`);
+  async createProduct(dto: CreateProductDto) { // Retrait du paramètre user
+    // Validation simple
+    if (!dto.name || !dto.price || !dto.categoryId) {
+        throw new BadRequestException('Invalid product data');
     }
-  
-    const newProduct = await this.prisma.product.create({
-      data: {
-        name: dto.name,
-        description: dto.description,
-        price: dto.price,
-        imagePath: dto.imagePath,
-        category: {
-          connect: { id: category.id }
+
+    // Recherche de la catégorie par son ID
+    const category = await this.prisma.category.findFirst({
+        where: {
+            id: dto.categoryId,
         }
-      },
-      include: {
-        category: true
-      }
     });
-  
-    await this.productGateway.server.emit('newProduct', await this.getAllProducts());
+
+    // Vérification si la catégorie existe
+    if (!category) {
+        throw new NotFoundException(`Category with ID ${dto.categoryId} not found`);
+    }
+
+    // Création du nouveau produit
+    const newProduct = await this.prisma.product.create({
+        data: {
+            name: dto.name,
+            description: dto.description,
+            price: dto.price,
+            imagePath: dto.imagePath,
+            category: {
+                connect: { id: category.id } // Connexion à la catégorie existante
+            }
+        },
+        include: {
+            category: true // Inclure les détails de la catégorie dans la réponse
+        }
+    });
+
+    // Émission d'un événement pour notifier les clients de la création du produit
+    await this.productGateway.server.emit('newProduct', newProduct);
+
     return newProduct;
-  }
+}
+
+
 
   async getProductById(id: number) {
     const product = await this.prisma.product.findUnique({
@@ -197,6 +246,11 @@ export class ProductService {
   }
 
   async updateProduct(id: number, dto: UpdateProductDto) {
+    // Validation simple
+    if (!dto.name || !dto.price) {
+      throw new InternalServerErrorException('Invalid product data');
+    }
+
     const existingProduct = await this.prisma.product.findUnique({
       where: { id },
     });
@@ -206,14 +260,14 @@ export class ProductService {
     }
 
     let category = null;
-    if (dto.category) {
+    if (dto.categoryId) {
       category = await this.prisma.category.findFirst({
         where: {
-          name: dto.category,
+          id: dto.categoryId,
         }
       });
       if (!category) {
-        throw new NotFoundException(`Category with name ${dto.category} not found`);
+        throw new NotFoundException(`Category with name ${dto.categoryId} not found`);
       }
     }
 
@@ -238,7 +292,13 @@ export class ProductService {
       ? updatedProduct.advice.reduce((sum, advice) => sum + advice.rating, 0) / updatedProduct.advice.length
       : null;
 
-    const products = await this.getAllProducts();
+    const products = await this.getAllProducts({
+      query: '', // Ajustez ces paramètres selon vos besoins
+      category: '',
+      page: 1,
+      limit: 10,
+    });
+    
     this.productGateway.server.emit('newProduct', products);
     
     return {
@@ -246,6 +306,7 @@ export class ProductService {
       averageRating
     };
   }
+
 
   async deleteProduct(id: number) {
     const existingProduct = await this.prisma.product.findUnique({
@@ -256,13 +317,25 @@ export class ProductService {
       throw new NotFoundException("Le produit n'existe pas");
     }
 
-    await this.prisma.product.delete({
-      where: { id },
-    });
+    try {
+      await this.prisma.product.delete({
+        where: { id },
+      });
 
-    const products = await this.getAllProducts();
-    await this.productGateway.server.emit('newProduct', products);
-    return { message: 'Produit supprimé avec succès' };
+      const products = await this.getAllProducts({
+        query: '', 
+        category: '',
+        page: 1,
+        limit: 10,
+      });
+      
+      await this.productGateway.server.emit('newProduct', products);
+      
+      return { message: 'Produit supprimé avec succès' };
+    } catch (error) {
+      console.error('Erreur lors de la suppression du produit:', error);
+      throw new InternalServerErrorException('Une erreur est survenue lors de la suppression du produit');
+    }
   }
 
   async getProductsByCategory(categoryId: number) {

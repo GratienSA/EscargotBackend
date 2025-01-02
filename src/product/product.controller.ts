@@ -12,8 +12,14 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Get('/all')
-  getAllProducts() {
-    return this.productService.getAllProducts();
+  getAllProducts(@Query() params: {
+    query?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+  }) {
+    return this.productService.getAllProducts(params);
   }
 
   @Get('/search')
@@ -41,8 +47,8 @@ export class ProductController {
 
   // @UseGuards(JwtGuard, AdminGuard) 
   @Post('/new')
-  createProduct(@Body() createProductDto: CreateProductDto, @GetUser() user: User) {
-    return this.productService.createProduct(createProductDto, user);
+  createProduct(@Body() createProductDto: CreateProductDto) {
+    return this.productService.createProduct(createProductDto);
   }
 
   @Get('/:id')

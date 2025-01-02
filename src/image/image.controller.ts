@@ -12,7 +12,7 @@ import { JwtGuard } from 'src/auth/guard/jwt.guard';
 export class ImageController {
   constructor(private readonly imageService: ImageService) {}
 
-  @Post('/upload')
+@Post('/upload')
 @UseGuards(JwtGuard)
 @UseInterceptors(
   FileInterceptor('file', {

@@ -18,11 +18,17 @@ export class StripeService {
 
   async createCheckoutSession(sessionData: Stripe.Checkout.SessionCreateParams): Promise<Stripe.Checkout.Session> {
     try {
+      console.log('Creating Stripe session with data:', sessionData); // Log les données envoyées
       const session = await this.stripe.checkout.sessions.create(sessionData);
+      console.log('Stripe session created successfully:', session);
       return session;
     } catch (error) {
       console.error('Stripe error:', error);
-      throw new InternalServerErrorException('Failed to create Stripe session: ' + error.message);
+      const errorMessage =
+        error instanceof Stripe.errors.StripeError
+          ? `Stripe error [${error.code}]: ${error.message}`
+          : 'An unexpected error occurred';
+      throw new InternalServerErrorException('Failed to create Stripe session: ' + errorMessage);
     }
   }
 
@@ -31,15 +37,25 @@ export class StripeService {
     if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET is not defined');
     }
-    return this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    try {
+      return this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } catch (error) {
+      console.error('Error verifying webhook signature:', error);
+      throw new InternalServerErrorException('Invalid Stripe webhook signature');
+    }
   }
 
   async retrieveSession(sessionId: string): Promise<Stripe.Checkout.Session> {
     try {
+      console.log(`Retrieving Stripe session with ID: ${sessionId}`);
       return await this.stripe.checkout.sessions.retrieve(sessionId);
     } catch (error) {
       console.error('Error retrieving Stripe session:', error);
-      throw new InternalServerErrorException('Failed to retrieve Stripe session: ' + error.message);
+      const errorMessage =
+        error instanceof Stripe.errors.StripeError
+          ? `Stripe error [${error.code}]: ${error.message}`
+          : 'An unexpected error occurred';
+      throw new InternalServerErrorException('Failed to retrieve Stripe session: ' + errorMessage);
     }
   }
 
@@ -49,10 +65,15 @@ export class StripeService {
       if (amount) {
         refundData.amount = amount;
       }
+      console.log(`Creating refund for PaymentIntent ${paymentIntentId} with data:`, refundData);
       return await this.stripe.refunds.create(refundData);
     } catch (error) {
       console.error('Error creating refund:', error);
-      throw new InternalServerErrorException('Failed to create refund: ' + error.message);
+      const errorMessage =
+        error instanceof Stripe.errors.StripeError
+          ? `Stripe error [${error.code}]: ${error.message}`
+          : 'An unexpected error occurred';
+      throw new InternalServerErrorException('Failed to create refund: ' + errorMessage);
     }
   }
 }

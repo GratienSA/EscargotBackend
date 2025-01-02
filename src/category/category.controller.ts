@@ -7,11 +7,9 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CategoryDto } from './dto';
-import { JwtGuard } from 'src/auth/guard/jwt.guard';
 
 
 @Controller('category')
@@ -40,5 +38,10 @@ export class CategoryController {
   @Delete('/delete/:id')
   deleteCategory(@Param('id', ParseIntPipe) id: number) {
     return this.categoryService.deleteCategory(id);
+  }
+
+  @Get(':id')
+  async getCategoryById(@Param('id') id: string) {
+    return this.categoryService.getCategoryById(Number(id));
   }
 }
